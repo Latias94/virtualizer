@@ -1,0 +1,29 @@
+[package]
+name = "virtualizer"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+authors = ["Mingzhen Zhuang <superfrankie621@gmail.com>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/Latias94/virtualizer"
+homepage = "https://github.com/Latias94/virtualizer"
+documentation = "https://docs.rs/virtualizer"
+description = "A headless virtualization engine inspired by TanStack Virtual."
+readme = "README.md"
+keywords = ["virtualizer", "virtualization", "virtual", "tui", "ui"]
+categories = ["algorithms", "data-structures"]
+include = [
+    "/src/**",
+    "/examples/**",
+    "/README.md",
+    "/CHANGELOG.md",
+    "/LICENSE-MIT",
+    "/LICENSE-APACHE",
+    "/Cargo.toml",
+]
+
+[dependencies]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
