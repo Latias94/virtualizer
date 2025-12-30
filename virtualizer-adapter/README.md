@@ -3,7 +3,7 @@
 [![CI](https://github.com/Latias94/virtualizer/actions/workflows/ci.yml/badge.svg)](https://github.com/Latias94/virtualizer/actions/workflows/ci.yml)
 [![crates.io](https://img.shields.io/crates/v/virtualizer-adapter.svg)](https://crates.io/crates/virtualizer-adapter)
 [![docs.rs](https://docs.rs/virtualizer-adapter/badge.svg)](https://docs.rs/virtualizer-adapter)
-[![MSRV](https://img.shields.io/badge/MSRV-1.85-blue.svg)](https://www.rust-lang.org/)
+[![MSRV](https://img.shields.io/badge/MSRV-1.88-blue.svg)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/crates/l/virtualizer-adapter.svg)](LICENSE-MIT)
 
 Adapter utilities for the `virtualizer` crate (workspace sibling).

@@ -12,7 +12,7 @@ SemVer, but the public API may change rapidly until `1.0`.
 
 - TBD
 
-## [0.3.0] - TBD
+## [0.3.0] - 2025-12-31
 
 ### Changed
 
