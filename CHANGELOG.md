@@ -12,8 +12,21 @@ SemVer, but the public API may change rapidly until `1.0`.
 
 - TBD
 
+## [0.2.0] - 2025-12-30
+
+### Added
+
+- Convenience APIs: `scroll_to_index` and `collect_virtual_*` helpers.
+
 ## [0.1.0] - 2025-12-30
+
 Initial release.
+
+### Added
+
+- Optional `serde` feature for serializing public data types.
+- Optional `tracing` feature for internal instrumentation.
+- Serializable state snapshots (`ViewportState`/`ScrollState`/`FrameState`) and restore helpers.
 
 ### virtualizer
 
