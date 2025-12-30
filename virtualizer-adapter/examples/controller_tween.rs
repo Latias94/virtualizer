@@ -25,7 +25,7 @@ fn main() {
     loop {
         now_ms += 16;
         if let Some(off) = c.tick(now_ms) {
-            if now_ms % 80 == 0 {
+            if now_ms.is_multiple_of(80) {
                 println!(
                     "t={now_ms} off={off} visible={:?}",
                     c.virtualizer().visible_range()

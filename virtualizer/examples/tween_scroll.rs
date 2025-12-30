@@ -72,7 +72,7 @@ fn main() {
             last = Some(it.index);
         });
 
-        if frame % 5 == 0 {
+        if frame.is_multiple_of(5)  {
             println!(
                 "t={now_ms}ms off={} visible={:?} first={:?} last={:?}",
                 v.scroll_offset(),
