@@ -1,0 +1,32 @@
+[package]
+name = "virtualizer-adapter"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/Latias94/virtualizer"
+homepage = "https://github.com/Latias94/virtualizer"
+documentation = "https://docs.rs/virtualizer-adapter"
+description = "Adapter utilities for the virtualizer crate."
+readme = "README.md"
+keywords = ["virtualizer", "virtualization", "virtual", "tui", "ui"]
+categories = ["algorithms", "data-structures"]
+include = [
+    "src/**",
+    "examples/**",
+    "LICENSE-APACHE",
+    "LICENSE-MIT",
+    "README.md",
+    "Cargo.toml",
+]
+
+[dependencies]
+virtualizer = { version = "0.1.0", path = "../virtualizer", default-features = false }
+
+[features]
+default = ["std"]
+std = ["virtualizer/std"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

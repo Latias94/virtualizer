@@ -26,6 +26,9 @@ jobs:
         with:
           components: rustfmt, clippy
 
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
+
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
@@ -33,11 +36,22 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Clippy
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
-      - name: Test
-        run: cargo test
+      - name: Test (nextest)
+        run: cargo nextest run --workspace
 
-      - name: Cargo package
-        run: cargo package
+      - name: Build examples
+        run: cargo build --workspace --examples
 
+      - name: Build (no-default-features)
+        run: |
+          cargo build -p virtualizer --no-default-features
+          cargo build -p virtualizer-adapter --no-default-features
+
+      - name: Cargo package (virtualizer)
+        run: cargo package -p virtualizer
+      # NOTE: We intentionally do not run `cargo package -p virtualizer-adapter` here.
+      # For workspace crates, packaging simulates crates.io publishing and resolves
+      # `virtualizer = { version = "^X.Y.Z" }` from the crates.io index, which will fail
+      # before `virtualizer` is published for that version.

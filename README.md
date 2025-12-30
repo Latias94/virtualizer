@@ -1,132 +1,51 @@
-# virtualizer
+# virtualizer (workspace)
+
+[![CI](https://github.com/Latias94/virtualizer/actions/workflows/ci.yml/badge.svg)](https://github.com/Latias94/virtualizer/actions/workflows/ci.yml)
+[![crates.io: virtualizer](https://img.shields.io/crates/v/virtualizer.svg)](https://crates.io/crates/virtualizer)
+[![docs.rs: virtualizer](https://docs.rs/virtualizer/badge.svg)](https://docs.rs/virtualizer)
+[![crates.io: virtualizer-adapter](https://img.shields.io/crates/v/virtualizer-adapter.svg)](https://crates.io/crates/virtualizer-adapter)
+[![docs.rs: virtualizer-adapter](https://docs.rs/virtualizer-adapter/badge.svg)](https://docs.rs/virtualizer-adapter)
+[![MSRV](https://img.shields.io/badge/MSRV-1.85-blue.svg)](https://www.rust-lang.org/)
+[![License](https://img.shields.io/crates/l/virtualizer.svg)](LICENSE-MIT)
 
 A headless virtualization engine inspired by TanStack Virtual.
 
-This crate provides the core algorithms needed to virtualize massive lists at interactive frame
-rates:
+This repo is a Cargo workspace with two crates:
 
-- Prefix sums over item sizes (Fenwick tree).
-- Fast offset → index lookup.
-- Overscanned visible ranges.
-- Optional dynamic measurement via `measure` / `resize_item`.
-- Scroll-to-index helpers (`scroll_to_index_offset`, `Align`).
+- `virtualizer/`: core, UI-agnostic virtualization engine (range math, measurements, caching).
+- `virtualizer-adapter/`: optional, framework-neutral adapter helpers (anchoring, tweens, controller patterns).
 
-It is UI-agnostic and can be used in TUIs/GUI frameworks.
+Core design:
 
-## Usage
+- Headless: does not hold any UI objects (TUI/GUI/framework neutral).
+- Adapter-driven: scrolling state, time source, and animations live in your adapter layer.
+- Allocation-friendly: zero-allocation iteration APIs for per-frame rendering.
 
-```rust
-use virtualizer::{Align, Virtualizer, VirtualizerOptions};
+What you get (high level):
 
-let mut v = Virtualizer::new(VirtualizerOptions::new(1_000_000, |_| 1));
-v.set_viewport_size(20);
-v.set_scroll_offset(100);
+- Fast offset → index lookup (Fenwick/prefix sums) + overscanned visible ranges.
+- Zero-allocation iteration: `for_each_virtual_index`, `for_each_virtual_item`, `for_each_virtual_item_keyed`.
+- Dynamic measurement: `measure` / `resize_item` (with optional scroll-jump prevention).
+- Pinned/sticky rows via `range_extractor` + `IndexEmitter` (emit indexes via callback, no `Vec` allocation).
+- Measurement cache persistence: `export_measurement_cache` / `import_measurement_cache`.
+- Adapter utilities: prepend anchoring + tween-driven smooth scrolling (optional).
 
-let items = v.get_virtual_items();
-assert!(!items.is_empty());
+Quick commands:
 
-let off = v.scroll_to_index_offset(1234, Align::Start);
-v.set_scroll_offset(off);
-```
+- Tests: `cargo nextest run --workspace`
+- Build examples: `cargo build --workspace --examples`
+- Run examples:
+  - `cargo run -p virtualizer --example adapter_sim`
+  - `cargo run -p virtualizer --example pinned_headers`
+  - `cargo run -p virtualizer --example tween_scroll`
+  - `cargo run -p virtualizer-adapter --example anchor_prepend`
+  - `cargo run -p virtualizer-adapter --example controller_tween`
 
-If you want clamped scroll offsets (useful for scroll-to helpers), use `set_scroll_offset_clamped`
-or `clamp_scroll_offset`.
+Docs:
 
-If your UI layer wants keys alongside items, use `get_virtual_items_keyed`.
+- Core crate: `virtualizer/README.md`
+- Example index + scenario notes: `virtualizer/examples/README.md`
 
-If you want to scroll to a raw offset (TanStack `scrollToOffset`), use `scroll_to_offset` /
-`scroll_to_offset_clamped`.
+Status:
 
-For an adapter-style walkthrough (rect/scroll events/dynamic measurement), see
-`examples/adapter_sim.rs` (`cargo run --example adapter_sim`).
-
-### Custom keys
-
-Use `VirtualizerOptions::new_with_key` if you want a non-`u64` key type (e.g. for stable caching
-across reorders in your UI layer).
-
-```rust
-use virtualizer::{Virtualizer, VirtualizerOptions};
-
-let opts = VirtualizerOptions::new_with_key(100, |_| 1, |i| format!("row-{i}"));
-let v: Virtualizer<String> = Virtualizer::new(opts);
-assert_eq!(v.key_for(7), "row-7");
-```
-
-Note: the key type must implement `Hash + Eq` with the default `std` feature, and `Ord` when built
-with `--no-default-features` (no_std + alloc).
-
-If your data is reordered/changed while `count` stays the same, call `sync_item_keys` so measured
-sizes follow item keys:
-
-```rust
-use virtualizer::{Virtualizer, VirtualizerOptions};
-
-let mut v = Virtualizer::new(VirtualizerOptions::new(2, |_| 1));
-v.measure(0, 10);
-v.set_get_item_key(|i| if i == 0 { 1 } else { 0 }); // reorder
-v.sync_item_keys();
-assert_eq!(v.item_size(1), Some(10));
-```
-
-### Scroll margin
-
-If your scroll offset is measured from a larger scroll container (e.g. window scrolling) and the
-list starts after some header/content, set `scroll_margin` so virtual item `start` values match the
-scroll container coordinate system:
-
-```rust
-use virtualizer::{Virtualizer, VirtualizerOptions};
-
-let mut opts = VirtualizerOptions::new(10_000, |_| 35);
-opts.scroll_margin = 50; // list begins 50px below scroll origin
-let mut v = Virtualizer::new(opts);
-v.set_viewport_and_scroll(500, 0);
-```
-
-### Rects
-
-TanStack Virtual exposes `scrollRect` and an `initialRect` option. This crate provides a platform-
-agnostic `Rect { main, cross }`:
-
-- `main`: the virtualized axis size (e.g. height for vertical lists)
-- `cross`: the cross axis size (e.g. width for vertical lists)
-
-Use `VirtualizerOptions::with_initial_rect(Some(rect))` for an initial value (SSR-like setups), and
-call `set_scroll_rect(rect)` from your adapter to keep it up-to-date.
-
-### Initial offset
-
-TanStack Virtual allows `initialOffset` to be a number or a function. This crate uses
-`InitialOffset`:
-
-- `InitialOffset::Value(123)`
-- `InitialOffset::Provider(|| 123)`
-
-### Dynamic measurement
-
-`measure` updates sizes but does not adjust scroll position. `resize_item` returns the applied scroll
-adjustment (delta) and also updates the virtualizer's internal `scroll_offset` to prevent jumps when
-items before the viewport change size.
-
-To reset all measurements (TanStack `measure()`), call `measure_all` (or `reset_measurements`).
-
-### State & callbacks
-
-If you want TanStack-style change notifications, set `on_change` (or call `set_on_change`) and drive
-`is_scrolling` via `set_is_scrolling` from your framework adapter.
-
-For TanStack parity, you can also use `notify_scroll_event(now_ms)` + `update_scrolling(now_ms)` to
-implement `isScrollingResetDelay` behavior without requiring timers in the core.
-
-### no_std + alloc
-
-Disable default features to build in `no_std` environments (requires `alloc`):
-
-```sh
-cargo build --no-default-features
-```
-
-## License
-
-Dual-licensed under `MIT OR Apache-2.0`. See `LICENSE-MIT` and `LICENSE-APACHE`.
+- `0.1.0` is not published yet; the API may change freely. See `CHANGELOG.md`.

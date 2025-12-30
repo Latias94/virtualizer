@@ -16,11 +16,19 @@ jobs:
   validate:
     name: Validate tag/version
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Ensure Cargo.toml version matches tag
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Ensure Cargo.toml versions match tag
         run: |
           python3 - <<'PY'
           import os, re, tomllib
@@ -29,12 +37,29 @@ jobs:
           if not re.fullmatch(r"\d+\.\d+\.\d+", version):
               raise SystemExit(f"Invalid tag version: {version}")
 
-          with open("Cargo.toml", "rb") as f:
-              data = tomllib.load(f)
-          crate_version = data["package"]["version"]
-          if crate_version != version:
-              raise SystemExit(f"Tag v{version} does not match Cargo.toml version: {crate_version}")
-          print(f"OK: v{version} matches Cargo.toml")
+          def read_version(path: str) -> str:
+              with open(path, "rb") as f:
+                  data = tomllib.load(f)
+              return data["package"]["version"]
+
+          crates = {
+              "virtualizer": read_version("virtualizer/Cargo.toml"),
+              "virtualizer-adapter": read_version("virtualizer-adapter/Cargo.toml"),
+          }
+          bad = {k: v for k, v in crates.items() if v != version}
+          if bad:
+              raise SystemExit(f"Tag v{version} does not match crate versions: {bad}")
+
+          with open("virtualizer-adapter/Cargo.toml", "rb") as f:
+              adapter = tomllib.load(f)
+          dep = adapter.get("dependencies", {}).get("virtualizer", {})
+          dep_version = dep.get("version") if isinstance(dep, dict) else None
+          if dep_version != version:
+              raise SystemExit(
+                  f"virtualizer-adapter dependency virtualizer version must be {version}, got {dep_version!r}"
+              )
+
+          print(f"OK: v{version} matches {crates}")
           PY
 
   test:
@@ -50,6 +75,9 @@ jobs:
         with:
           components: rustfmt, clippy
 
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
+
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
@@ -57,13 +85,20 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Clippy
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
-      - name: Test
-        run: cargo test
+      - name: Test (nextest)
+        run: cargo nextest run --workspace
 
-      - name: Cargo package
-        run: cargo package
+      - name: Build examples
+        run: cargo build --workspace --examples
+
+      - name: Cargo package (virtualizer)
+        run: cargo package -p virtualizer
+      # NOTE: We intentionally do not run `cargo package -p virtualizer-adapter` here.
+      # For workspace crates, packaging simulates crates.io publishing and resolves
+      # `virtualizer = { version = "^X.Y.Z" }` from the crates.io index, which will fail
+      # before `virtualizer` is published for this tag.
 
   publish:
     name: Publish to crates.io
@@ -79,8 +114,19 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Publish
-        run: cargo publish --token "${{ secrets.CARGO_REGISTRY_TOKEN }}"
+      - name: Publish virtualizer
+        run: cargo publish -p virtualizer --token "${{ secrets.CARGO_REGISTRY_TOKEN }}"
+
+      - name: Publish virtualizer-adapter
+        run: |
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if cargo publish -p virtualizer-adapter --token "${{ secrets.CARGO_REGISTRY_TOKEN }}"; then
+              exit 0
+            fi
+            echo "virtualizer-adapter publish failed (attempt $i), waiting for crates.io index..."
+            sleep 30
+          done
+          exit 1
 
   github-release:
     name: Create GitHub release
@@ -95,6 +141,9 @@ jobs:
       - name: Extract release notes
         id: notes
         uses: ffurrer2/extract-release-notes@v2
+        with:
+          changelog_file: CHANGELOG.md
+          fail_on_missing: false
 
       - name: Create release
         uses: softprops/action-gh-release@v2
@@ -102,4 +151,3 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
           body: ${{ steps.notes.outputs.release_notes }}
-
