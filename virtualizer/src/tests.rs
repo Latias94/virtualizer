@@ -439,3 +439,31 @@ fn frame_state_can_roundtrip() {
     assert_eq!(v2.scroll_offset(), 42);
     assert!(!v2.is_scrolling());
 }
+
+#[test]
+fn scroll_to_index_sets_offset_without_scrolling() {
+    let mut v = Virtualizer::new(VirtualizerOptions::new(100, |_| 1));
+    v.set_viewport_size(10);
+    assert!(!v.is_scrolling());
+
+    let expected = v.scroll_to_index_offset(50, Align::Start);
+    let applied = v.scroll_to_index(50, Align::Start);
+    assert_eq!(applied, expected);
+    assert_eq!(v.scroll_offset(), expected);
+    assert!(!v.is_scrolling());
+}
+
+#[test]
+fn collect_virtual_items_matches_for_each() {
+    let mut v = Virtualizer::new(VirtualizerOptions::new(100, |_| 1));
+    v.set_viewport_size(10);
+    v.set_scroll_offset(50);
+
+    let mut a = Vec::new();
+    v.collect_virtual_items(&mut a);
+
+    let mut b = Vec::new();
+    v.for_each_virtual_item(|it| b.push(it));
+
+    assert_eq!(a, b);
+}

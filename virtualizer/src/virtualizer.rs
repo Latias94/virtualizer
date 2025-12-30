@@ -938,6 +938,21 @@ impl<K: KeyCacheKey> Virtualizer<K> {
         }
     }
 
+    /// Programmatically scrolls to an index (no animation).
+    ///
+    /// This sets the internal `scroll_offset` to the computed (clamped) target and triggers
+    /// `on_change`. It does **not** mark the virtualizer as "scrolling".
+    ///
+    /// If you want "user scrolling" semantics (e.g. to drive `is_scrolling` debouncing), call
+    /// `apply_scroll_offset_event_clamped(scroll_to_index_offset(...), now_ms)` instead.
+    ///
+    /// Returns the applied (clamped) offset.
+    pub fn scroll_to_index(&mut self, index: usize, align: Align) -> u64 {
+        let offset = self.scroll_to_index_offset(index, align);
+        self.set_scroll_offset(offset);
+        offset
+    }
+
     pub fn scroll_to_index_offset(&self, index: usize, align: Align) -> u64 {
         if !self.options.enabled {
             return self.options.initial_offset.resolve();
@@ -973,6 +988,68 @@ impl<K: KeyCacheKey> Virtualizer<K> {
         };
 
         self.clamp_scroll_offset(target)
+    }
+
+    /// Collects virtual item indexes into `out` (clears `out` first).
+    ///
+    /// This is a convenience wrapper around [`Self::for_each_virtual_index`]. For maximum
+    /// performance, prefer `for_each_virtual_index` and reuse a scratch buffer in your adapter.
+    pub fn collect_virtual_indexes(&self, out: &mut Vec<usize>) {
+        self.collect_virtual_indexes_for(self.scroll_offset, self.viewport_size, out);
+    }
+
+    /// Collects virtual item indexes into `out` for a given `scroll_offset`/`viewport_size`.
+    ///
+    /// This clears `out` first.
+    pub fn collect_virtual_indexes_for(
+        &self,
+        scroll_offset: u64,
+        viewport_size: u32,
+        out: &mut Vec<usize>,
+    ) {
+        out.clear();
+        self.for_each_virtual_index_for(scroll_offset, viewport_size, |i| out.push(i));
+    }
+
+    /// Collects virtual items into `out` (clears `out` first).
+    ///
+    /// This is a convenience wrapper around [`Self::for_each_virtual_item`]. For maximum
+    /// performance, prefer `for_each_virtual_item` and reuse a scratch buffer in your adapter.
+    pub fn collect_virtual_items(&self, out: &mut Vec<VirtualItem>) {
+        self.collect_virtual_items_for(self.scroll_offset, self.viewport_size, out);
+    }
+
+    /// Collects virtual items into `out` for a given `scroll_offset`/`viewport_size`.
+    ///
+    /// This clears `out` first.
+    pub fn collect_virtual_items_for(
+        &self,
+        scroll_offset: u64,
+        viewport_size: u32,
+        out: &mut Vec<VirtualItem>,
+    ) {
+        out.clear();
+        self.for_each_virtual_item_for(scroll_offset, viewport_size, |it| out.push(it));
+    }
+
+    /// Collects keyed virtual items into `out` (clears `out` first).
+    ///
+    /// This is a convenience wrapper around [`Self::for_each_virtual_item_keyed`].
+    pub fn collect_virtual_items_keyed(&self, out: &mut Vec<VirtualItemKeyed<K>>) {
+        self.collect_virtual_items_keyed_for(self.scroll_offset, self.viewport_size, out);
+    }
+
+    /// Collects keyed virtual items into `out` for a given `scroll_offset`/`viewport_size`.
+    ///
+    /// This clears `out` first.
+    pub fn collect_virtual_items_keyed_for(
+        &self,
+        scroll_offset: u64,
+        viewport_size: u32,
+        out: &mut Vec<VirtualItemKeyed<K>>,
+    ) {
+        out.clear();
+        self.for_each_virtual_item_keyed_for(scroll_offset, viewport_size, |it| out.push(it));
     }
 
     pub fn index_at_offset(&self, offset: u64) -> Option<usize> {
