@@ -22,12 +22,14 @@ include = [
 
 [dependencies]
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"], optional = true }
+tracing = { version = "0.1", default-features = false, features = ["std"], optional = true }
 virtualizer = { version = "0.1.0", path = "../virtualizer", default-features = false }
 
 [features]
 default = ["std"]
 std = ["virtualizer/std"]
 serde = ["dep:serde", "virtualizer/serde"]
+tracing = ["std", "dep:tracing", "virtualizer/tracing"]
 
 [package.metadata.docs.rs]
 all-features = true

@@ -23,11 +23,13 @@ include = [
 
 [dependencies]
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"], optional = true }
+tracing = { version = "0.1", default-features = false, features = ["std"], optional = true }
 
 [features]
 default = ["std"]
 std = []
 serde = ["dep:serde"]
+tracing = ["std", "dep:tracing"]
 
 [package.metadata.docs.rs]
 all-features = true

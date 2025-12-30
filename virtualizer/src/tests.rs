@@ -409,3 +409,33 @@ fn initial_offset_provider_is_used() {
     assert_eq!(v.scroll_offset(), 42);
     assert!(INITIAL_OFFSET_PROVIDER_CALLED.load(Ordering::Relaxed) >= 1);
 }
+
+#[test]
+fn frame_state_can_roundtrip() {
+    let mut v1 = Virtualizer::new(VirtualizerOptions::new(100, |_| 1));
+    v1.apply_scroll_frame_clamped(
+        Rect {
+            main: 10,
+            cross: 20,
+        },
+        42,
+        100,
+    );
+    v1.set_is_scrolling(false);
+
+    let state = v1.frame_state();
+
+    let mut v2 = Virtualizer::new(VirtualizerOptions::new(100, |_| 1));
+    v2.restore_frame_state(state, 200);
+
+    assert_eq!(
+        v2.scroll_rect(),
+        Rect {
+            main: 10,
+            cross: 20
+        }
+    );
+    assert_eq!(v2.viewport_size(), 10);
+    assert_eq!(v2.scroll_offset(), 42);
+    assert!(!v2.is_scrolling());
+}

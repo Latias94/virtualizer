@@ -13,8 +13,7 @@ SemVer, but the public API may change rapidly until `1.0`.
 - TBD
 
 ## [0.1.0] - 2025-12-30
-
-`0.1.0` has not been published yet. The API may change freely until the first release.
+Initial release.
 
 ### virtualizer
 

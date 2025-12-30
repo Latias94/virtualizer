@@ -18,10 +18,14 @@ extern crate alloc;
 #[cfg(test)]
 extern crate std;
 
+#[macro_use]
+mod macros;
+
 mod emitter;
 mod fenwick;
 mod key;
 mod options;
+mod state;
 mod types;
 mod virtualizer;
 
@@ -33,6 +37,7 @@ pub use options::{
     InitialOffset, OnChangeCallback, RangeExtractor,
     ShouldAdjustScrollPositionOnItemSizeChangeCallback, VirtualizerOptions,
 };
+pub use state::{FrameState, ScrollState, ViewportState};
 pub use types::{
     Align, ItemKey, Range, Rect, ScrollDirection, VirtualItem, VirtualItemKeyed, VirtualRange,
 };

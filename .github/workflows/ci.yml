@@ -50,6 +50,14 @@ jobs:
           cargo build -p virtualizer-adapter --no-default-features
           cargo build -p virtualizer --no-default-features --features serde
           cargo build -p virtualizer-adapter --no-default-features --features serde
+          # `tracing` requires `std`, so we only validate it under default features.
+
+      - name: Build (std + tracing)
+        run: |
+          cargo build -p virtualizer --features tracing
+          cargo build -p virtualizer-adapter --features tracing
+          cargo build -p virtualizer --features serde,tracing
+          cargo build -p virtualizer-adapter --features serde,tracing
 
       - name: Cargo package (virtualizer)
         run: cargo package -p virtualizer

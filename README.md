@@ -1,6 +1,8 @@
 # virtualizer (workspace)
 
 [![CI](https://github.com/Latias94/virtualizer/actions/workflows/ci.yml/badge.svg)](https://github.com/Latias94/virtualizer/actions/workflows/ci.yml)
+[![virtualizer](https://img.shields.io/crates/v/virtualizer.svg)](https://crates.io/crates/virtualizer)
+[![virtualizer-adapter](https://img.shields.io/crates/v/virtualizer-adapter.svg)](https://crates.io/crates/virtualizer-adapter)
 [![MSRV](https://img.shields.io/badge/MSRV-1.85-blue.svg)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/crates/l/virtualizer.svg)](LICENSE-MIT)
 
@@ -17,25 +19,22 @@ Core design:
 - Adapter-driven: scrolling state, time source, and animations live in your adapter layer.
 - Allocation-friendly: zero-allocation iteration APIs for per-frame rendering.
 
-## Crates
-
-- `virtualizer/`: core, UI-agnostic virtualization engine (range math, measurements, caching).
-- `virtualizer-adapter/`: optional, framework-neutral adapter helpers (anchoring, tweens, controller patterns).
-
 ## Installation
 
-This workspace has not been published yet. Use a git dependency for now:
+```toml
+[dependencies]
+virtualizer = "0.1.0"
+
+# Optional:
+virtualizer-adapter = "0.1.0"
+```
+
+For unreleased changes, use a git dependency:
 
 ```toml
 [dependencies]
 virtualizer = { git = "https://github.com/Latias94/virtualizer" }
 virtualizer-adapter = { git = "https://github.com/Latias94/virtualizer" }
-```
-
-```toml
-[dependencies]
-virtualizer = "0.1.0"
-virtualizer-adapter = "0.1.0"
 ```
 
 ## Usage
@@ -93,4 +92,4 @@ Quick commands:
 
 Status:
 
-- `0.1.0` is not published yet; the API may change freely. See `CHANGELOG.md`.
+- See `CHANGELOG.md` for release notes and API changes.

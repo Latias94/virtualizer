@@ -27,6 +27,11 @@ impl<'a> IndexEmitter<'a> {
 
     pub fn emit(&mut self, index: usize) {
         if index >= self.range.count {
+            vwarn!(
+                index,
+                count = self.range.count,
+                "IndexEmitter: out-of-bounds index"
+            );
             debug_assert!(
                 index < self.range.count,
                 "IndexEmitter: out-of-bounds index (i={index}, count={})",
@@ -40,6 +45,11 @@ impl<'a> IndexEmitter<'a> {
                 return;
             }
             if index < prev {
+                vwarn!(
+                    prev,
+                    next = index,
+                    "IndexEmitter: indexes must be emitted in ascending order"
+                );
                 debug_assert!(
                     index > prev,
                     "IndexEmitter: indexes must be emitted in ascending order (prev={prev}, next={index})"

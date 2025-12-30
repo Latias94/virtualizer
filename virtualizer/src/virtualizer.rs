@@ -9,6 +9,7 @@ use crate::{
     Align, InitialOffset, ItemKey, Range, Rect, ScrollDirection, VirtualItem, VirtualItemKeyed,
     VirtualRange, VirtualizerOptions,
 };
+use crate::{FrameState, ScrollState, ViewportState};
 
 #[derive(Clone, Debug)]
 pub struct Virtualizer<K = ItemKey> {
@@ -33,6 +34,12 @@ impl<K: KeyCacheKey> Virtualizer<K> {
     pub fn new(options: VirtualizerOptions<K>) -> Self {
         let scroll_rect = options.initial_rect.unwrap_or_default();
         let scroll_offset = options.initial_offset.resolve();
+        vdebug!(
+            count = options.count,
+            enabled = options.enabled,
+            overscan = options.overscan,
+            "Virtualizer::new"
+        );
         let mut v = Self {
             viewport_size: scroll_rect.main,
             scroll_offset,
@@ -73,6 +80,12 @@ impl<K: KeyCacheKey> Virtualizer<K> {
             Arc::ptr_eq(&self.options.estimate_size, &options.estimate_size);
         let get_item_key_unchanged = Arc::ptr_eq(&self.options.get_item_key, &options.get_item_key);
         self.options = options;
+        vtrace!(
+            count = self.options.count,
+            enabled = self.options.enabled,
+            overscan = self.options.overscan,
+            "Virtualizer::set_options"
+        );
 
         if !self.options.enabled {
             self.viewport_size = 0;
@@ -251,6 +264,65 @@ impl<K: KeyCacheKey> Virtualizer<K> {
         self.scroll_rect
     }
 
+    /// Returns a lightweight snapshot of the current viewport state.
+    pub fn viewport_state(&self) -> ViewportState {
+        ViewportState {
+            rect: self.scroll_rect,
+        }
+    }
+
+    /// Returns a lightweight snapshot of the current scroll state.
+    pub fn scroll_state(&self) -> ScrollState {
+        ScrollState {
+            offset: self.scroll_offset,
+            is_scrolling: self.is_scrolling,
+        }
+    }
+
+    /// Returns a combined snapshot of viewport + scroll state.
+    pub fn frame_state(&self) -> FrameState {
+        FrameState {
+            viewport: self.viewport_state(),
+            scroll: self.scroll_state(),
+        }
+    }
+
+    /// Restores viewport geometry from a previously captured snapshot.
+    pub fn restore_viewport_state(&mut self, viewport: ViewportState) {
+        self.set_scroll_rect(viewport.rect);
+    }
+
+    /// Restores scroll state from a previously captured snapshot.
+    ///
+    /// When `scroll.is_scrolling` is `true`, this will update the internal scrolling timers as if
+    /// a scroll event happened at `now_ms`.
+    pub fn restore_scroll_state(&mut self, scroll: ScrollState, now_ms: u64) {
+        if scroll.is_scrolling {
+            self.apply_scroll_offset_event_clamped(scroll.offset, now_ms);
+            return;
+        }
+        self.batch_update(|v| {
+            v.set_scroll_offset_clamped(scroll.offset);
+            v.set_is_scrolling(false);
+        });
+    }
+
+    /// Restores both viewport + scroll state from a previously captured snapshot.
+    ///
+    /// When `frame.scroll.is_scrolling` is `true`, this will update the internal scrolling timers
+    /// as if a scroll event happened at `now_ms`.
+    pub fn restore_frame_state(&mut self, frame: FrameState, now_ms: u64) {
+        if frame.scroll.is_scrolling {
+            self.apply_scroll_frame_clamped(frame.viewport.rect, frame.scroll.offset, now_ms);
+            return;
+        }
+        self.batch_update(|v| {
+            v.set_scroll_rect(frame.viewport.rect);
+            v.set_scroll_offset_clamped(frame.scroll.offset);
+            v.set_is_scrolling(false);
+        });
+    }
+
     pub fn set_scroll_rect(&mut self, rect: Rect) {
         if self.scroll_rect == rect {
             return;
@@ -305,6 +377,7 @@ impl<K: KeyCacheKey> Virtualizer<K> {
     /// Applies a scroll offset update from your UI layer (e.g. wheel/drag), and marks the
     /// virtualizer as scrolling.
     pub fn apply_scroll_offset_event(&mut self, offset: u64, now_ms: u64) {
+        vtrace!(offset, now_ms, "apply_scroll_offset_event");
         self.batch_update(|v| {
             v.set_scroll_offset(offset);
             v.notify_scroll_event(now_ms);
@@ -318,6 +391,7 @@ impl<K: KeyCacheKey> Virtualizer<K> {
 
     /// Same as `apply_scroll_offset_event`, but clamps the offset.
     pub fn apply_scroll_offset_event_clamped(&mut self, offset: u64, now_ms: u64) {
+        vtrace!(offset, now_ms, "apply_scroll_offset_event_clamped");
         self.batch_update(|v| {
             v.set_scroll_offset_clamped(offset);
             v.notify_scroll_event(now_ms);
@@ -343,6 +417,13 @@ impl<K: KeyCacheKey> Virtualizer<K> {
     /// This is the recommended entry point for UI adapters that receive scroll events along with
     /// updated viewport/rect information.
     pub fn apply_scroll_frame(&mut self, rect: Rect, scroll_offset: u64, now_ms: u64) {
+        vtrace!(
+            rect_main = rect.main,
+            rect_cross = rect.cross,
+            scroll_offset,
+            now_ms,
+            "apply_scroll_frame"
+        );
         self.batch_update(|v| {
             v.set_scroll_rect(rect);
             v.set_scroll_offset(scroll_offset);
@@ -352,6 +433,13 @@ impl<K: KeyCacheKey> Virtualizer<K> {
 
     /// Same as `apply_scroll_frame`, but clamps the offset.
     pub fn apply_scroll_frame_clamped(&mut self, rect: Rect, scroll_offset: u64, now_ms: u64) {
+        vtrace!(
+            rect_main = rect.main,
+            rect_cross = rect.cross,
+            scroll_offset,
+            now_ms,
+            "apply_scroll_frame_clamped"
+        );
         self.batch_update(|v| {
             v.set_scroll_rect(rect);
             v.set_scroll_offset_clamped(scroll_offset);
@@ -485,9 +573,12 @@ impl<K: KeyCacheKey> Virtualizer<K> {
     /// Note: this rebuilds internal per-index sizes using the current key mapping.
     pub fn import_measurement_cache(&mut self, entries: impl IntoIterator<Item = (K, u32)>) {
         self.key_sizes.clear();
+        let mut n = 0usize;
         for (k, v) in entries {
             self.key_sizes.insert(k, v);
+            n = n.saturating_add(1);
         }
+        vdebug!(entries = n, "import_measurement_cache");
         self.rebuild_estimates();
         self.notify();
     }
@@ -504,6 +595,7 @@ impl<K: KeyCacheKey> Virtualizer<K> {
         if index >= self.options.count {
             return;
         }
+        vtrace!(index, size, "measure_keyed");
         self.set_item_size_keyed(index, key, size);
         self.notify();
     }
@@ -919,6 +1011,11 @@ impl<K: KeyCacheKey> Virtualizer<K> {
     }
 
     fn rebuild_estimates(&mut self) {
+        vdebug!(
+            count = self.options.count,
+            cached = self.key_sizes.len(),
+            "rebuild_estimates"
+        );
         self.sizes.clear();
         self.measured.clear();
         self.sizes
