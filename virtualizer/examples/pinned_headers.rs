@@ -13,12 +13,29 @@ fn main() {
         let pinned = Arc::clone(&pinned);
         move |r: Range, emit: &mut dyn FnMut(usize)| {
             let mut e = IndexEmitter::new(r, emit);
-            // Emit pinned indexes in ascending order.
+            // IMPORTANT: indexes must be emitted in ascending order.
+            //
+            // We want pinned rows both before and after the overscanned range. To keep the output
+            // sorted, emit:
+            // 1) pinned indexes before the overscanned range
+            // 2) the overscanned contiguous range
+            // 3) pinned indexes after the overscanned range
+            let overscanned_start = r.start_index.saturating_sub(r.overscan);
+            let overscanned_end = r.end_index.saturating_add(r.overscan).min(r.count);
+
             for &idx in pinned.iter() {
-                e.emit_pinned(idx);
+                if idx < overscanned_start {
+                    e.emit_pinned(idx);
+                }
             }
-            // Emit the normal range (with overscan) after pinned.
+
             e.emit_overscanned();
+
+            for &idx in pinned.iter() {
+                if idx >= overscanned_end {
+                    e.emit_pinned(idx);
+                }
+            }
         }
     }));
 
