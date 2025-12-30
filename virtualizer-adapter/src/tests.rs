@@ -57,3 +57,13 @@ fn controller_tween_drives_scroll_offset() {
     assert!(!c.is_animating());
     assert_eq!(c.virtualizer().scroll_offset(), to);
 }
+
+#[test]
+fn tween_retarget_is_continuous() {
+    let mut t = Tween::new(0, 100, 0, 100, Easing::SmoothStep);
+    let mid = t.sample(50);
+    t.retarget(50, 200, 100);
+    assert_eq!(t.from, mid);
+    assert_eq!(t.to, 200);
+    assert_eq!(t.start_ms, 50);
+}

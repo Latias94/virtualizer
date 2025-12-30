@@ -12,6 +12,16 @@ SemVer, but the public API may change rapidly until `1.0`.
 
 - TBD
 
+## [0.3.0] - TBD
+
+### Changed
+
+- Performance: optimize count-only resizes (avoid full rebuild for append/truncate).
+
+### Tests
+
+- Add example-parity coverage for core and adapter workflows.
+
 ## [0.2.0] - 2025-12-30
 
 ### Added

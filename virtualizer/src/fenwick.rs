@@ -55,6 +55,43 @@ impl Fenwick {
         self.tree.len().saturating_sub(1)
     }
 
+    pub(crate) fn truncate(&mut self, new_len: usize) {
+        let cur = self.len();
+        if new_len >= cur {
+            return;
+        }
+        self.total = self.prefix_sum(new_len);
+        self.tree.truncate(new_len + 1);
+        self.max_bit = if new_len == 0 {
+            0
+        } else {
+            highest_power_of_two_leq(new_len)
+        };
+    }
+
+    /// Appends a new value to the end of the Fenwick tree.
+    ///
+    /// `value` is the per-index value (already including any gap/spacing rules from callers).
+    ///
+    /// This runs in `O(log n)` due to the internal prefix sum queries needed to initialize the
+    /// newly appended internal nodes.
+    pub(crate) fn push_value(&mut self, value: u64) {
+        let new_len = self.len().saturating_add(1);
+        self.tree.push(0);
+        self.total = self.total.saturating_add(value);
+
+        // Fenwick tree invariant: tree[i] stores the sum of the last lsb(i) values ending at i.
+        // When appending, we can derive the correct initial value by using existing prefix sums.
+        let l = lsb(new_len);
+        let start_exclusive = new_len.saturating_sub(l);
+        let before = self
+            .prefix_sum(new_len.saturating_sub(1))
+            .saturating_sub(self.prefix_sum(start_exclusive));
+        self.tree[new_len] = before.saturating_add(value);
+
+        self.max_bit = highest_power_of_two_leq(new_len);
+    }
+
     pub(crate) fn add(&mut self, index: usize, delta: i64) {
         let n = self.len();
         if index >= n {

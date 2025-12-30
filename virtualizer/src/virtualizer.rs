@@ -108,10 +108,13 @@ impl<K: KeyCacheKey> Virtualizer<K> {
             self.last_scroll_event_ms = None;
         } else if !was_enabled {
             self.reset_to_initial();
-        } else if self.options.count != prev_count
-            || !estimate_size_unchanged
-            || !get_item_key_unchanged
-        {
+        } else if self.options.count != prev_count {
+            if estimate_size_unchanged && get_item_key_unchanged {
+                self.resize_count(prev_count, self.options.count);
+            } else {
+                self.rebuild_estimates();
+            }
+        } else if !estimate_size_unchanged || !get_item_key_unchanged {
             self.rebuild_estimates();
         } else if self.options.gap != prev_gap {
             self.rebuild_fenwick();
@@ -463,8 +466,9 @@ impl<K: KeyCacheKey> Virtualizer<K> {
         if self.options.count == count {
             return;
         }
+        let prev = self.options.count;
         self.options.count = count;
-        self.rebuild_estimates();
+        self.resize_count(prev, count);
         self.notify();
     }
 
@@ -1127,6 +1131,59 @@ impl<K: KeyCacheKey> Virtualizer<K> {
 
     fn rebuild_fenwick(&mut self) {
         self.sums = Fenwick::from_sizes(&self.sizes, self.options.gap);
+    }
+
+    fn resize_count(&mut self, prev_count: usize, new_count: usize) {
+        if self.sizes.len() != prev_count
+            || self.measured.len() != prev_count
+            || self.sums.len() != prev_count
+        {
+            // Defensive fallback: if internal invariants don't match the expected previous count,
+            // rebuild from scratch (preserves correctness at the expense of performance).
+            self.rebuild_estimates();
+            return;
+        }
+
+        let gap = self.options.gap as u64;
+
+        if new_count > prev_count {
+            if gap > 0 && prev_count > 0 {
+                // The previous last item was stored without a trailing gap. It is no longer last.
+                self.sums.add(prev_count - 1, gap as i64);
+            }
+
+            self.sizes.reserve_exact(new_count - prev_count);
+            self.measured.reserve_exact(new_count - prev_count);
+
+            for i in prev_count..new_count {
+                let key = self.key_for(i);
+                let (size, is_measured) = if let Some(&measured_size) = self.key_sizes.get(&key) {
+                    (measured_size, true)
+                } else {
+                    ((self.options.estimate_size)(i), false)
+                };
+
+                self.sizes.push(size);
+                self.measured.push(is_measured);
+
+                let mut value = size as u64;
+                if gap > 0 && i + 1 < new_count {
+                    value = value.saturating_add(gap);
+                }
+                self.sums.push_value(value);
+            }
+            return;
+        }
+
+        // Shrink (or clear).
+        self.sizes.truncate(new_count);
+        self.measured.truncate(new_count);
+        self.sums.truncate(new_count);
+
+        if gap > 0 && new_count > 0 && new_count < prev_count {
+            // The new last item previously had a trailing gap; remove it.
+            self.sums.add(new_count - 1, -(gap as i64));
+        }
     }
 
     fn item(&self, index: usize) -> VirtualItem {
