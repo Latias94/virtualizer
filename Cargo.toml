@@ -24,6 +24,10 @@ include = [
 
 [dependencies]
 
+[features]
+default = ["std"]
+std = []
+
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]

@@ -2,8 +2,7 @@ use virtualizer::{Align, Virtualizer, VirtualizerOptions};
 
 fn main() {
     let mut v = Virtualizer::new(VirtualizerOptions::new(1_000_000, |_| 1));
-    v.set_viewport_size(10);
-    v.set_scroll_offset(123_456);
+    v.set_viewport_and_scroll(10, 123_456);
 
     let items = v.get_virtual_items();
     println!("total_size={}", v.get_total_size());
