@@ -48,6 +48,8 @@ jobs:
         run: |
           cargo build -p virtualizer --no-default-features
           cargo build -p virtualizer-adapter --no-default-features
+          cargo build -p virtualizer --no-default-features --features serde
+          cargo build -p virtualizer-adapter --no-default-features --features serde
 
       - name: Cargo package (virtualizer)
         run: cargo package -p virtualizer

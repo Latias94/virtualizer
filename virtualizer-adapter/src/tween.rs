@@ -1,5 +1,6 @@
 /// A small tween helper for adapter-driven smooth scrolling.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Tween {
     pub from: u64,
     pub to: u64,
@@ -41,6 +42,7 @@ impl Tween {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Easing {
     Linear,
     SmoothStep,

@@ -93,6 +93,11 @@ jobs:
       - name: Build examples
         run: cargo build --workspace --examples
 
+      - name: Build (no-default-features + serde)
+        run: |
+          cargo build -p virtualizer --no-default-features --features serde
+          cargo build -p virtualizer-adapter --no-default-features --features serde
+
       - name: Cargo package (virtualizer)
         run: cargo package -p virtualizer
       # NOTE: We intentionally do not run `cargo package -p virtualizer-adapter` here.

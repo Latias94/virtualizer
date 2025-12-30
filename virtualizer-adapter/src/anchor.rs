@@ -8,6 +8,7 @@ use crate::VirtualizerKey;
 /// - chat/timeline "prepend" (load older messages above) without content jumping
 /// - any reorder/replace where you want the viewport to stay anchored to an item identity
 #[derive(Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ScrollAnchor<K> {
     pub key: K,
     /// The distance from the anchor item's start to the viewport's scroll offset.

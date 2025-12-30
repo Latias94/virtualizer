@@ -22,10 +22,12 @@ include = [
 ]
 
 [dependencies]
+serde = { version = "1.0", default-features = false, features = ["alloc", "derive"], optional = true }
 
 [features]
 default = ["std"]
 std = []
+serde = ["dep:serde"]
 
 [package.metadata.docs.rs]
 all-features = true
