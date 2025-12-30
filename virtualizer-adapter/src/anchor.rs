@@ -7,6 +7,9 @@ use crate::VirtualizerKey;
 /// Typical use cases:
 /// - chat/timeline "prepend" (load older messages above) without content jumping
 /// - any reorder/replace where you want the viewport to stay anchored to an item identity
+///
+/// The adapter is responsible for providing a stable `key` and a `key_to_index` lookup when
+/// applying the anchor.
 #[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ScrollAnchor<K> {

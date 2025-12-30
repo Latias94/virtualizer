@@ -10,6 +10,12 @@
 //! - viewport size (height/width)
 //! - scroll offset
 //! - item size estimates and (optionally) dynamic measurements
+//!
+//! # Feature flags
+//!
+//! - `std` (default): Enables `std` support.
+//! - `serde`: Adds `serde::Serialize`/`Deserialize` for the public data types (ranges/items/state).
+//! - `tracing`: Emits internal trace/debug/warn events via `tracing` (requires `std`).
 #![cfg_attr(not(feature = "std"), no_std)]
 #![forbid(unsafe_code)]
 

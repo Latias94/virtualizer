@@ -11,6 +11,12 @@ use crate::{
 ///
 /// For UI scroll containers (e.g. DOM), you can use the returned offset from `tick()` to set the
 /// real scroll position, while keeping the virtualizer state in sync.
+///
+/// # Typical integration loop
+///
+/// - On UI scroll events: call `on_scroll(offset, now_ms)` (cancels any active tween).
+/// - On UI resize/layout: call `on_viewport_size(main)`.
+/// - Each frame/timer: call `tick(now_ms)`; if it returns `Some(offset)`, apply it to the real UI.
 #[derive(Clone, Debug)]
 pub struct Controller<K> {
     v: virtualizer::Virtualizer<K>,

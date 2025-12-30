@@ -6,6 +6,18 @@ use crate::Range;
 /// - Out-of-bounds indexes are ignored (and debug-asserted).
 /// - Duplicates are ignored.
 /// - Out-of-order indexes are ignored (and debug-asserted).
+///
+/// # Example
+///
+/// ```no_run
+/// use virtualizer::{IndexEmitter, Range};
+///
+/// let extractor = |range: Range, emit: &mut dyn FnMut(usize)| {
+///     let mut e = IndexEmitter::new(range, emit);
+///     e.emit_pinned(0);
+///     e.emit_overscanned();
+/// };
+/// ```
 pub struct IndexEmitter<'a> {
     range: Range,
     last: Option<usize>,

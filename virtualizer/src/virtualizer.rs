@@ -11,6 +11,14 @@ use crate::{
 };
 use crate::{FrameState, ScrollState, ViewportState};
 
+/// A headless virtualization engine.
+///
+/// This type is intentionally UI-agnostic:
+/// - It does not hold any UI objects.
+/// - Your adapter drives it by providing viewport geometry and scroll offsets.
+/// - Rendering is exposed via zero-allocation iteration APIs (`for_each_virtual_*`).
+///
+/// For smooth scrolling / tweens / anchoring patterns, see the `virtualizer-adapter` crate.
 #[derive(Clone, Debug)]
 pub struct Virtualizer<K = ItemKey> {
     options: VirtualizerOptions<K>,
@@ -31,6 +39,10 @@ pub struct Virtualizer<K = ItemKey> {
 }
 
 impl<K: KeyCacheKey> Virtualizer<K> {
+    /// Creates a new virtualizer from options.
+    ///
+    /// If `options.initial_rect` and/or `options.initial_offset` are set, those values are applied
+    /// immediately.
     pub fn new(options: VirtualizerOptions<K>) -> Self {
         let scroll_rect = options.initial_rect.unwrap_or_default();
         let scroll_offset = options.initial_offset.resolve();

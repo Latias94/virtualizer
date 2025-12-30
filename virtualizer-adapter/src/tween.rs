@@ -1,4 +1,8 @@
 /// A small tween helper for adapter-driven smooth scrolling.
+///
+/// This is deliberately minimal and framework-neutral:
+/// - The adapter provides the time source (`now_ms`).
+/// - The adapter applies the returned scroll offset to the real scroll container.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Tween {
@@ -10,6 +14,9 @@ pub struct Tween {
 }
 
 impl Tween {
+    /// Creates a tween.
+    ///
+    /// `duration_ms` is clamped to at least 1ms.
     pub fn new(from: u64, to: u64, start_ms: u64, duration_ms: u64, easing: Easing) -> Self {
         Self {
             from,
@@ -24,6 +31,7 @@ impl Tween {
         now_ms.saturating_sub(self.start_ms) >= self.duration_ms
     }
 
+    /// Samples the tween at time `now_ms`.
     pub fn sample(&self, now_ms: u64) -> u64 {
         let elapsed = now_ms.saturating_sub(self.start_ms);
         let t = (elapsed as f32 / self.duration_ms as f32).clamp(0.0, 1.0);
@@ -35,12 +43,14 @@ impl Tween {
         v.max(0.0) as u64
     }
 
+    /// Retargets the tween while preserving continuity at `now_ms`.
     pub fn retarget(&mut self, now_ms: u64, new_to: u64, duration_ms: u64) {
         let cur = self.sample(now_ms);
         *self = Self::new(cur, new_to, now_ms, duration_ms, self.easing);
     }
 }
 
+/// Built-in easing curves.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Easing {
@@ -50,6 +60,7 @@ pub enum Easing {
 }
 
 impl Easing {
+    /// Samples the easing curve with `t` in `[0, 1]`.
     pub fn sample(self, t: f32) -> f32 {
         match self {
             Self::Linear => t,

@@ -3,8 +3,15 @@ use alloc::sync::Arc;
 use crate::virtualizer::Virtualizer;
 use crate::{ItemKey, Range, Rect, VirtualItem};
 
+/// A callback fired when a virtualizer state update occurs.
+///
+/// The second argument is `is_scrolling`.
 pub type OnChangeCallback<K> = Arc<dyn Fn(&Virtualizer<K>, bool) + Send + Sync>;
 
+/// A hook that decides whether to adjust scroll position when an item size changes.
+///
+/// This is typically used to prevent visual "jumps" when an item above the current scroll offset
+/// is measured and differs from its estimate.
 pub type ShouldAdjustScrollPositionOnItemSizeChangeCallback<K> =
     Arc<dyn Fn(&Virtualizer<K>, VirtualItem, i64) -> bool + Send + Sync>;
 
@@ -16,11 +23,17 @@ pub type ShouldAdjustScrollPositionOnItemSizeChangeCallback<K> =
 /// Contract:
 /// - `emit(i)` must be called with `i < range.count`.
 /// - The emitted indexes must be sorted ascending; duplicates are allowed but ignored.
+///
+/// Tip: use [`crate::IndexEmitter`] to enforce the contract (and to avoid accidental panics in
+/// debug builds).
 pub type RangeExtractor = Arc<dyn Fn(Range, &mut dyn FnMut(usize)) + Send + Sync>;
 
+/// Initial scroll offset configuration.
 #[derive(Clone)]
 pub enum InitialOffset {
+    /// A fixed initial offset.
     Value(u64),
+    /// A lazily evaluated initial offset provider (called by `Virtualizer::new`).
     Provider(Arc<dyn Fn() -> u64 + Send + Sync>),
 }
 
@@ -48,6 +61,10 @@ impl core::fmt::Debug for InitialOffset {
     }
 }
 
+/// Configuration for [`crate::Virtualizer`].
+///
+/// This type is designed to be cheap to clone: heavy fields are stored in `Arc`s so adapters can
+/// update a few fields and call `Virtualizer::set_options` without reallocating closures.
 pub struct VirtualizerOptions<K = ItemKey> {
     pub count: usize,
     pub estimate_size: Arc<dyn Fn(usize) -> u32 + Send + Sync>,
@@ -143,6 +160,10 @@ impl<K> Clone for VirtualizerOptions<K> {
 }
 
 impl VirtualizerOptions<ItemKey> {
+    /// Creates options for a list keyed by index (`ItemKey = u64`).
+    ///
+    /// `estimate_size(i)` should return the estimated item size in the scroll axis (e.g. row
+    /// height for vertical lists). The estimate is used until an item is measured.
     pub fn new(count: usize, estimate_size: impl Fn(usize) -> u32 + Send + Sync + 'static) -> Self {
         Self {
             count,
@@ -168,6 +189,10 @@ impl VirtualizerOptions<ItemKey> {
 }
 
 impl<K> VirtualizerOptions<K> {
+    /// Creates options with a custom key mapping.
+    ///
+    /// Use this when you want measurements to follow items across reordering/replacement:
+    /// `get_item_key(i)` should return a stable identity for the item at index `i`.
     pub fn new_with_key(
         count: usize,
         estimate_size: impl Fn(usize) -> u32 + Send + Sync + 'static,
@@ -216,6 +241,7 @@ impl<K> VirtualizerOptions<K> {
         self
     }
 
+    /// Sets the initial viewport rectangle.
     pub fn with_initial_rect(mut self, initial_rect: Option<Rect>) -> Self {
         self.initial_rect = initial_rect;
         self
