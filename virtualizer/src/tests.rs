@@ -85,8 +85,8 @@ fn expected_index_at_offset_in_list(
     // prefix_sum(consumed) <= target, then clamp to a valid item index.
     let mut consumed = 0usize;
     let mut prefix = 0u64;
-    for i in 0..count {
-        let mut seg = sizes[i] as u64;
+    for (i, &size) in sizes.iter().enumerate() {
+        let mut seg = size as u64;
         if gap > 0 && i + 1 < count {
             seg = seg.saturating_add(gap as u64);
         }
@@ -426,7 +426,10 @@ fn align_auto_scrolls_to_end_when_item_is_after_viewport() {
     );
 
     // Note: offsets are always clamped to `max_scroll_offset` (no overscroll).
-    assert_eq!(v.scroll_to_index_offset(9, Align::Auto), v.max_scroll_offset());
+    assert_eq!(
+        v.scroll_to_index_offset(9, Align::Auto),
+        v.max_scroll_offset()
+    );
 }
 
 #[test]
@@ -484,14 +487,10 @@ fn sync_item_keys_can_move_measurements_without_replacing_get_item_key() {
     use std::sync::Mutex;
 
     let keys = Arc::new(Mutex::new(vec![0u64, 1, 2]));
-    let mut v = Virtualizer::new(VirtualizerOptions::new_with_key(
-        3,
-        |_| 1,
-        {
-            let keys = Arc::clone(&keys);
-            move |i| keys.lock().unwrap()[i]
-        },
-    ));
+    let mut v = Virtualizer::new(VirtualizerOptions::new_with_key(3, |_| 1, {
+        let keys = Arc::clone(&keys);
+        move |i| keys.lock().unwrap()[i]
+    }));
 
     v.measure(0, 10);
     assert_eq!(v.item_size(0), Some(10));
@@ -683,7 +682,10 @@ fn example_adapter_sim_smoke() {
     let saved_scroll = Arc::new(AtomicU64::new(120));
 
     let opts = VirtualizerOptions::new(1_000, |_| 1)
-        .with_initial_rect(Some(Rect { main: 10, cross: 80 }))
+        .with_initial_rect(Some(Rect {
+            main: 10,
+            cross: 80,
+        }))
         .with_initial_offset_provider({
             let saved_scroll = Arc::clone(&saved_scroll);
             move || saved_scroll.load(Ordering::Relaxed)
@@ -697,9 +699,22 @@ fn example_adapter_sim_smoke() {
 
     let mut v: Virtualizer<u64> = Virtualizer::new(opts);
     assert_eq!(v.scroll_offset(), 120);
-    assert_eq!(v.scroll_rect(), Rect { main: 10, cross: 80 });
+    assert_eq!(
+        v.scroll_rect(),
+        Rect {
+            main: 10,
+            cross: 80
+        }
+    );
 
-    v.apply_scroll_frame(Rect { main: 12, cross: 80 }, 200, 0);
+    v.apply_scroll_frame(
+        Rect {
+            main: 12,
+            cross: 80,
+        },
+        200,
+        0,
+    );
     assert!(v.is_scrolling());
 
     let mut saw_pinned = false;
@@ -725,7 +740,15 @@ fn example_adapter_sim_smoke() {
     assert_eq!(v.scroll_offset(), prev + 19);
 
     // Simulate a safe "swap" reorder by changing the key mapping.
-    v.set_get_item_key(|i| if i == 0 { 1 } else if i == 1 { 0 } else { i as u64 });
+    v.set_get_item_key(|i| {
+        if i == 0 {
+            1
+        } else if i == 1 {
+            0
+        } else {
+            i as u64
+        }
+    });
     assert_eq!(v.item_size(0), Some(1));
 
     // Debounced scrolling reset.
@@ -805,7 +828,10 @@ fn example_tween_scroll_retarget_smoke() {
     }
 
     // Finish the animation and mark scrolling as ended.
-    v.apply_scroll_offset_event_clamped(tween.sample(now_ms + tween.duration_ms), now_ms + tween.duration_ms);
+    v.apply_scroll_offset_event_clamped(
+        tween.sample(now_ms + tween.duration_ms),
+        now_ms + tween.duration_ms,
+    );
     v.set_is_scrolling(false);
 
     let expected = v.scroll_to_index_offset(7_500, Align::Start);
@@ -896,7 +922,8 @@ fn property_random_layout_invariants() {
 
             let mut expected_virtual = expected;
             if !expected_virtual.is_empty() {
-                expected_virtual.start_index = expected_virtual.start_index.saturating_sub(overscan);
+                expected_virtual.start_index =
+                    expected_virtual.start_index.saturating_sub(overscan);
                 expected_virtual.end_index =
                     core::cmp::min(count, expected_virtual.end_index.saturating_add(overscan));
             }
@@ -960,14 +987,10 @@ fn property_keyed_reorder_sync_item_keys_preserves_measurements_by_key() {
         keys.truncate(count);
 
         let key_map = Arc::new(std::sync::RwLock::new(keys.clone()));
-        let mut v = Virtualizer::new(VirtualizerOptions::new_with_key(
-            count,
-            |_| 1,
-            {
-                let key_map = Arc::clone(&key_map);
-                move |i| key_map.read().unwrap()[i]
-            },
-        ));
+        let mut v = Virtualizer::new(VirtualizerOptions::new_with_key(count, |_| 1, {
+            let key_map = Arc::clone(&key_map);
+            move |i| key_map.read().unwrap()[i]
+        }));
 
         // Measure a subset by current index.
         let mut measured: std::collections::HashMap<u64, u32> = std::collections::HashMap::new();
