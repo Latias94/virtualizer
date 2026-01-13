@@ -46,6 +46,20 @@ impl VirtualRange {
     pub fn is_empty(&self) -> bool {
         self.start_index >= self.end_index
     }
+
+    /// Returns the last index in the range (inclusive), or `None` if the range is empty.
+    pub fn end_inclusive(&self) -> Option<usize> {
+        if self.is_empty() {
+            None
+        } else {
+            Some(self.end_index.saturating_sub(1))
+        }
+    }
+
+    /// Converts the half-open range `[start_index, end_index)` into an inclusive range.
+    pub fn as_inclusive(&self) -> Option<core::ops::RangeInclusive<usize>> {
+        Some(self.start_index..=self.end_inclusive()?)
+    }
 }
 
 /// A virtual item produced for rendering.

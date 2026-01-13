@@ -610,12 +610,17 @@ fn example_dynamic_measurement_smoke() {
     assert_eq!(v.scroll_offset(), 220);
 
     let before = v.scroll_offset();
-    v.measure(1, 50);
+    let applied = v.resize_item(1, 50);
+    assert_eq!(applied, 40);
+    assert_eq!(v.scroll_offset(), before + 40);
+
+    let before = v.scroll_offset();
+    v.measure_unadjusted(2, 50);
     assert_eq!(v.scroll_offset(), before);
 
     let to = v.scroll_to_index_offset(10, Align::Start);
     v.set_scroll_offset_clamped(to);
-    assert_eq!(v.scroll_offset(), 160);
+    assert_eq!(v.scroll_offset(), 200);
 
     let mut saw_10 = false;
     v.for_each_virtual_item(|it| {

@@ -153,9 +153,13 @@ TanStack Virtual allows `initialOffset` to be a number or a function. This crate
 
 ### Dynamic measurement
 
-`measure` updates sizes but does not adjust scroll position. `resize_item` returns the applied scroll
-adjustment (delta) and also updates the virtualizer's internal `scroll_offset` to prevent jumps when
-items before the viewport change size.
+`measure` updates sizes and may adjust scroll position to prevent visual "jumps" when items before
+the viewport change size (TanStack-aligned behavior).
+
+If you want to update measurements without changing scroll position, use `measure_unadjusted`.
+
+`resize_item` returns the applied scroll adjustment (delta) and also updates the virtualizer's
+internal `scroll_offset` when adjustment is needed.
 
 To reset all measurements (TanStack `measure()`), call `reset_measurements`.
 

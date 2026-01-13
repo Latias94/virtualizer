@@ -599,19 +599,44 @@ impl<K: KeyCacheKey> Virtualizer<K> {
         self.notify();
     }
 
+    /// Marks an item as measured and updates its cached size.
+    ///
+    /// This is aligned with TanStack Virtual's "measure element" behavior: if the measured item is
+    /// before the current scroll offset, the virtualizer may adjust `scroll_offset` to prevent a
+    /// visible "jump".
+    ///
+    /// If you want to update measurements without any scroll adjustment, use
+    /// `measure_unadjusted`.
     pub fn measure(&mut self, index: usize, size: u32) {
         if index >= self.options.count {
             return;
         }
-        let key = self.key_for(index);
-        self.measure_keyed(index, key, size);
+        let _ = self.resize_item(index, size);
     }
 
+    /// Same as [`Self::measure`], but uses a precomputed key to avoid recomputing `get_item_key`.
     pub fn measure_keyed(&mut self, index: usize, key: K, size: u32) {
         if index >= self.options.count {
             return;
         }
-        vtrace!(index, size, "measure_keyed");
+        let _ = self.resize_item_keyed(index, key, size);
+    }
+
+    /// Marks an item as measured and updates its cached size without adjusting `scroll_offset`.
+    pub fn measure_unadjusted(&mut self, index: usize, size: u32) {
+        if index >= self.options.count {
+            return;
+        }
+        let key = self.key_for(index);
+        self.measure_keyed_unadjusted(index, key, size);
+    }
+
+    /// Same as [`Self::measure_unadjusted`], but uses a precomputed key.
+    pub fn measure_keyed_unadjusted(&mut self, index: usize, key: K, size: u32) {
+        if index >= self.options.count {
+            return;
+        }
+        vtrace!(index, size, "measure_keyed_unadjusted");
         self.set_item_size_keyed(index, key, size);
         self.notify();
     }
@@ -673,7 +698,18 @@ impl<K: KeyCacheKey> Virtualizer<K> {
         delta
     }
 
+    /// Measures multiple items in one pass.
+    ///
+    /// Like [`Self::measure`], this may adjust `scroll_offset` to prevent jumps.
     pub fn measure_many(&mut self, measurements: impl IntoIterator<Item = (usize, u32)>) {
+        let _ = self.resize_item_many(measurements);
+    }
+
+    /// Measures multiple items without adjusting `scroll_offset`.
+    pub fn measure_many_unadjusted(
+        &mut self,
+        measurements: impl IntoIterator<Item = (usize, u32)>,
+    ) {
         for (index, size) in measurements {
             if index >= self.options.count {
                 continue;
@@ -698,12 +734,14 @@ impl<K: KeyCacheKey> Virtualizer<K> {
         measurements: impl IntoIterator<Item = (usize, u32)>,
     ) -> i64 {
         let mut applied = 0i64;
-        for (index, size) in measurements {
-            if index >= self.options.count {
-                continue;
+        self.batch_update(|v| {
+            for (index, size) in measurements {
+                if index >= v.options.count {
+                    continue;
+                }
+                applied += v.resize_item(index, size);
             }
-            applied += self.resize_item(index, size);
-        }
+        });
         applied
     }
 

@@ -22,13 +22,16 @@ fn main() {
         v.total_size()
     );
 
-    // Measuring an item updates sizes but does not adjust scroll.
+    // Measuring an item updates sizes and may adjust scroll (TanStack-aligned behavior).
     v.measure(1, 50);
     println!(
         "measure(1): off={} total={}",
         v.scroll_offset(),
         v.total_size()
     );
+
+    // If you want to update measurements without changing scroll, use `measure_unadjusted`.
+    v.measure_unadjusted(2, 30);
 
     // Scroll-to helpers still work with updated measurements.
     let to = v.scroll_to_index_offset(10, Align::Start);
