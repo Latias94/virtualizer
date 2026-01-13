@@ -12,6 +12,17 @@ SemVer, but the public API may change rapidly until `1.0`.
 
 - TBD
 
+## [0.4.0] - 2026-01-13
+
+### Changed
+
+- API: `measure` / `measure_keyed` / `measure_many` now behave like TanStack Virtual's "measure element":
+  they may adjust `scroll_offset` to prevent jumps when measuring items before the viewport.
+- API: added `measure_unadjusted` / `measure_keyed_unadjusted` / `measure_many_unadjusted` for callers who
+  want measurement updates without scroll adjustment.
+- Perf: `resize_item_many` now batches notifications via `batch_update`.
+- Ergonomics: `VirtualRange` adds `end_inclusive` / `as_inclusive` helpers.
+
 ## [0.3.0] - 2025-12-31
 
 ### Changed

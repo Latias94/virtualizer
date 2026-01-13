@@ -23,10 +23,10 @@ Core design:
 
 ```toml
 [dependencies]
-virtualizer = "0.3.0"
+virtualizer = "0.4.0"
 
 # Optional:
-virtualizer-adapter = "0.3.0"
+virtualizer-adapter = "0.4.0"
 ```
 
 For unreleased changes, use a git dependency:
